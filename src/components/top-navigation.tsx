@@ -21,7 +21,7 @@ export const TopNavigation: React.FC = () => {
   };
 
   const handleGithubClick = () => {
-    window.open('https://github.com', '_blank', 'noopener,noreferrer');
+    window.open('https://github.com/ycxom/integrated-search-engine', '_blank', 'noopener,noreferrer');
   };
 
   return (
