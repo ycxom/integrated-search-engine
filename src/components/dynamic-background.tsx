@@ -76,13 +76,31 @@ export const DynamicBackground: React.FC<DynamicBackgroundProps> = ({ children }
   };
 
   useEffect(() => {
-    // 监听窗口大小变化，以便在设备方向改变时更新背景
+    // 监听窗口大小变化，但只在宽度或高度发生显著变化时更新背景
+    // 这样可以避免输入法弹出导致的小幅度高度变化触发背景重新加载
     const handleResize = () => {
-      // 防抖处理，避免频繁加载
-      if (window.innerWidth !== window.screen.width) {
+      // 存储当前窗口尺寸
+      const currentWidth = window.innerWidth;
+      const currentHeight = window.innerHeight;
+      
+      // 如果是首次加载或窗口宽度发生变化（设备方向改变）
+      // 或者窗口高度变化超过30%（真正的窗口大小变化，而不是输入法弹出）
+      if (!handleResize.lastWidth || 
+          Math.abs(currentWidth - handleResize.lastWidth) > 100 ||
+          Math.abs(currentHeight - handleResize.lastHeight) / handleResize.lastHeight > 0.3) {
+        
+        // 更新记录的尺寸
+        handleResize.lastWidth = currentWidth;
+        handleResize.lastHeight = currentHeight;
+        
+        // 加载新背景
         loadBackgroundImage();
       }
     };
+    
+    // 初始化存储的尺寸
+    handleResize.lastWidth = window.innerWidth;
+    handleResize.lastHeight = window.innerHeight;
     
     // 初始加载
     loadBackgroundImage();

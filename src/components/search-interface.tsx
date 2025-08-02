@@ -135,7 +135,7 @@ export const SearchInterface: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen px-4">
+    <div className="flex flex-col items-center justify-start min-h-screen px-4 pt-20 md:pt-16">
       <div className="text-center mb-8">
         <h1 className={`text-5xl md:text-6xl font-bold ${getTextColor()} mb-4 drop-shadow-2xl`}>
           多功能搜索
