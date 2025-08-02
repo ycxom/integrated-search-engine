@@ -23,7 +23,6 @@
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "framework": "vite",
-  "functions": {},
   "headers": [
     {
       "source": "/assets/(.*)",
