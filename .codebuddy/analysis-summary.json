@@ -1,0 +1,1 @@
+{"title":"集成搜索引擎项目 Vercel 部署支持","features":["Vercel 部署配置","构建优化","环境变量设置","自动化部署","功能验证"],"tech":{"Web":{"arch":"react","component":"shadcn"},"部署平台":"Vercel","构建工具":"Vite","语言":"TypeScript"},"design":"现代化搜索引擎界面，支持多引擎切换，响应式设计","plan":{"创建 Vercel 配置文件和部署设置":"done","优化 Vite 构建配置以适配 Vercel":"done","配置环境变量和项目设置":"done","设置 Git 仓库和自动部署":"done","测试部署并验证所有功能":"done"}}
