@@ -145,13 +145,6 @@ export const SearchInterface: React.FC = () => {
         </p>
       </div>
 
-      <SearchEngineSelector 
-        selectedEngine={selectedEngine}
-        onEngineChange={setSelectedEngine}
-        searchType={searchType}
-        onSearchTypeChange={handleSearchTypeChange}
-      />
-
       <div className="w-full max-w-2xl mb-8">
         <div className="relative">
           <div className={`backdrop-blur-md rounded-2xl p-6 shadow-2xl ${
@@ -206,7 +199,14 @@ export const SearchInterface: React.FC = () => {
         </div>
       </div>
 
-      <div className="w-full max-w-4xl">
+      <SearchEngineSelector 
+        selectedEngine={selectedEngine}
+        onEngineChange={setSelectedEngine}
+        searchType={searchType}
+        onSearchTypeChange={handleSearchTypeChange}
+      />
+
+      <div className="w-full max-w-4xl mt-8">
         <h3 className={`text-center mb-4 text-lg ${theme === 'light' ? 'text-black/80' : 'text-white/80'}`}>热门搜索</h3>
         <div className="flex flex-wrap gap-3 justify-center">
           {quickSearchTerms.map((term, index) => (
