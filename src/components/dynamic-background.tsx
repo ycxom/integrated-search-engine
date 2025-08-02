@@ -55,12 +55,16 @@ export const DynamicBackground: React.FC<DynamicBackgroundProps> = ({ children }
         previousImageRef.current = imageUrl;
         setBackgroundImage(imageUrl);
       } else {
-        console.error('背景图片加载失败，使用默认图片');
-        setBackgroundImage('/placeholder.svg?height=1080&width=1920');
+        console.error('背景图片加载失败，使用备用图片');
+        // 根据设备类型选择备用图片
+        const fallbackImage = window.innerWidth <= 768 ? '/mobile-fallback.png' : '/desktop-fallback.png';
+        setBackgroundImage(fallbackImage);
       }
     } catch (error) {
       console.error('加载背景图片失败:', error);
-      setBackgroundImage('/placeholder.svg?height=1080&width=1920');
+      // 根据设备类型选择备用图片
+      const fallbackImage = window.innerWidth <= 768 ? '/mobile-fallback.png' : '/desktop-fallback.png';
+      setBackgroundImage(fallbackImage);
     } finally {
       setIsLoading(false);
       isLoadingRef.current = false;
