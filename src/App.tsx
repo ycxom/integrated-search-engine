@@ -1,7 +1,7 @@
 import React from 'react';
 import { DynamicBackground } from './components/dynamic-background';
 import { TopNavigation } from './components/top-navigation';
-import { SearchInterface } from './components/search-interface';
+import { SearchInterfaceOptimized } from './components/search-interface-optimized';
 import { ThemeProvider } from './components/theme-provider';
 
 function App() {
@@ -9,7 +9,7 @@ function App() {
     <ThemeProvider defaultTheme="system" storageKey="search-ui-theme">
       <DynamicBackground>
         <TopNavigation />
-        <SearchInterface />
+        <SearchInterfaceOptimized />
       </DynamicBackground>
     </ThemeProvider>
   );
