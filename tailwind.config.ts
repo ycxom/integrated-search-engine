@@ -11,6 +11,9 @@ const config: Config = {
   ],
   theme: {
   	extend: {
+      perspective: {
+        '500': '500px',
+      },
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
@@ -84,11 +87,52 @@ const config: Config = {
   				to: {
   					height: '0'
   				}
-  			}
+  			},
+        'card-flip-down': {
+          '0%': { 
+            transform: 'rotateX(0deg)',
+            'transform-origin': 'bottom',
+            'backface-visibility': 'hidden',
+            'z-index': '10'
+          },
+          '100%': { 
+            transform: 'rotateX(-180deg)',
+            'transform-origin': 'bottom',
+            'backface-visibility': 'hidden',
+            'z-index': '10'
+          }
+        },
+        'card-flip-up': {
+          '0%': { 
+            transform: 'rotateX(180deg)',
+            'transform-origin': 'top',
+            'backface-visibility': 'hidden',
+            'z-index': '5'
+          },
+          '100%': { 
+            transform: 'rotateX(0deg)',
+            'transform-origin': 'top',
+            'backface-visibility': 'hidden',
+            'z-index': '5'
+          }
+        },
+        'shadow-fade-in': {
+          '0%': { opacity: '0' },
+          '50%': { opacity: '0.7' },
+          '100%': { opacity: '0' }
+        },
+        'number-roll': {
+          '0%': { transform: 'translateY(0%)' },
+          '100%': { transform: 'translateY(-100%)' }
+        }
   		},
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
-  			'accordion-up': 'accordion-up 0.2s ease-out'
+  			'accordion-up': 'accordion-up 0.2s ease-out',
+        'card-flip-down': 'card-flip-down 0.5s cubic-bezier(0.455, 0.03, 0.515, 0.955) forwards',
+        'card-flip-up': 'card-flip-up 0.5s cubic-bezier(0.455, 0.03, 0.515, 0.955) 0.25s forwards',
+        'shadow-fade-in': 'shadow-fade-in 0.6s ease-in-out',
+        'number-roll': 'number-roll 0.5s ease-in-out'
   		}
   	}
   },

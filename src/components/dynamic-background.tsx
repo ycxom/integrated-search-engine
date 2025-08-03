@@ -31,152 +31,184 @@ const getWallpaperApiByDevice = (): string => {
 };
 
 export const DynamicBackground: React.FC<DynamicBackgroundProps> = ({ children }) => {
-  const [backgroundImage, setBackgroundImage] = useState<string>('');
+  const [currentImage, setCurrentImage] = useState('');
+  const [nextImage, setNextImage] = useState('');
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const { theme } = useTheme();
+
   const isLoadingRef = useRef(false);
-  const previousImageRef = useRef<string | null>(null);
-  const deviceTypeRef = useRef<string>('');
-  const lastLoadTimeRef = useRef<number>(0);
-  const orientationRef = useRef<string>('');
+  const deviceTypeRef = useRef('');
+  const lastLoadTimeRef = useRef(0);
+  const orientationRef = useRef('');
+  const currentImageRef = useRef('');
+  const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // 追踪当前图片URL用于清理
+  useEffect(() => { 
+    currentImageRef.current = currentImage; 
+  }, [currentImage]);
+
+  const handleLoadError = () => {
+    const fallbackImage = window.innerWidth <= 768 ? '/mobile-fallback.png' : '/desktop-fallback.png';
+    if (!currentImageRef.current) {
+      setCurrentImage(fallbackImage);
+      setNextImage('');
+    } else {
+      // 如果已有图片，直接切换到备用图片
+      setCurrentImage(fallbackImage);
+      setNextImage('');
+    }
+    setIsLoading(false);
+    setIsTransitioning(false);
+    isLoadingRef.current = false;
+  };
 
   const loadBackgroundImage = async (forceReload = false) => {
-    // 防止重复加载
-    if (isLoadingRef.current) return;
-    
-    // 获取当前设备类型
+    // 防止重复加载或正在过渡时加载
+    if (isLoadingRef.current || isTransitioning) return;
+
     const apiUrl = getWallpaperApiByDevice();
     const currentDeviceType = apiUrl.split('/').pop() || '';
-    
-    // 获取当前设备方向
     const currentOrientation = window.matchMedia('(orientation: landscape)').matches ? 'landscape' : 'portrait';
-    
-    // 如果不是强制刷新，并且设备类型和方向都没有变化，且距离上次加载时间不足5分钟，则不重新加载
     const currentTime = Date.now();
-    if (!forceReload && 
-        currentDeviceType === deviceTypeRef.current && 
+
+    if (!forceReload &&
+        currentDeviceType === deviceTypeRef.current &&
         currentOrientation === orientationRef.current &&
         currentTime - lastLoadTimeRef.current < 5 * 60 * 1000) {
       return;
     }
-    
-    // 更新设备类型、方向和加载时间
+
     deviceTypeRef.current = currentDeviceType;
     orientationRef.current = currentOrientation;
     lastLoadTimeRef.current = currentTime;
-    
+
     isLoadingRef.current = true;
     setIsLoading(true);
-    
+
     try {
-      // 添加随机参数避免缓存
       const urlWithCache = `${apiUrl}?cache=${currentTime}`;
       const response = await fetch(urlWithCache);
+      if (!response.ok) throw new Error('背景图片加载失败');
+
+      const blob = await response.blob();
+      const newImageUrl = URL.createObjectURL(blob);
+
+      // 预加载新图片，确保完全加载后再开始动画
+      const img = new Image();
+      img.src = newImageUrl;
       
-      if (response.ok) {
-        const blob = await response.blob();
-        
-        // 释放之前的图片URL
-        if (previousImageRef.current && previousImageRef.current.startsWith('blob:')) {
-          URL.revokeObjectURL(previousImageRef.current);
+      img.onload = () => {
+        if (!currentImageRef.current) {
+          // 首次加载，直接设置
+          setCurrentImage(newImageUrl);
+          setIsLoading(false);
+          isLoadingRef.current = false;
+        } else {
+          // 步骤1: 先将新图片设置到底层（nextImage）
+          setNextImage(newImageUrl);
+          
+          // 步骤2: 等待底层图片渲染完成后开始过渡
+          setTimeout(() => {
+            setIsTransitioning(true);
+            
+            // 步骤3: 过渡动画完成后，将新图片提升为当前图片
+            transitionTimeoutRef.current = setTimeout(() => {
+              const oldImage = currentImageRef.current;
+              setCurrentImage(newImageUrl);
+              setNextImage('');
+              setIsTransitioning(false);
+              
+              // 清理旧图片资源
+              if (oldImage && oldImage.startsWith('blob:')) {
+                URL.revokeObjectURL(oldImage);
+              }
+              
+              setIsLoading(false);
+              isLoadingRef.current = false;
+            }, 1000); // 与CSS动画时长保持一致
+          }, 100); // 给底层图片一点时间渲染
         }
-        
-        const imageUrl = URL.createObjectURL(blob);
-        previousImageRef.current = imageUrl;
-        setBackgroundImage(imageUrl);
-      } else {
-        console.error('背景图片加载失败，使用备用图片');
-        // 根据设备类型选择备用图片
-        const fallbackImage = window.innerWidth <= 768 ? '/mobile-fallback.png' : '/desktop-fallback.png';
-        setBackgroundImage(fallbackImage);
-      }
+      };
+      
+      img.onerror = () => {
+        URL.revokeObjectURL(newImageUrl);
+        console.error('新背景图片预加载失败，使用备用图片');
+        handleLoadError();
+      };
     } catch (error) {
       console.error('加载背景图片失败:', error);
-      // 根据设备类型选择备用图片
-      const fallbackImage = window.innerWidth <= 768 ? '/mobile-fallback.png' : '/desktop-fallback.png';
-      setBackgroundImage(fallbackImage);
-    } finally {
-      setIsLoading(false);
-      isLoadingRef.current = false;
+      handleLoadError();
     }
   };
 
   useEffect(() => {
-    // 使用防抖函数处理窗口大小变化
     let resizeTimeout: number | null = null;
-    
     const handleResize = () => {
-      // 清除之前的定时器
-      if (resizeTimeout) {
-        window.clearTimeout(resizeTimeout);
-      }
-      
-      // 设置新的定时器，延迟500ms执行，避免频繁触发
+      if (resizeTimeout) window.clearTimeout(resizeTimeout);
       resizeTimeout = window.setTimeout(() => {
-        // 获取当前设备方向
-        const isLandscape = window.matchMedia('(orientation: landscape)').matches;
-        const currentOrientation = isLandscape ? 'landscape' : 'portrait';
-        
-        // 如果设备方向发生变化，才重新加载背景
+        const currentOrientation = window.matchMedia('(orientation: landscape)').matches ? 'landscape' : 'portrait';
         if (currentOrientation !== orientationRef.current) {
-          loadBackgroundImage(false); // 不强制刷新，但会检查方向变化
+          loadBackgroundImage(false);
         }
       }, 500);
     };
-    
-    // 初始加载
-    loadBackgroundImage(true); // 强制刷新
-    
-    // 设置定时器，每30分钟更换一次背景
+
+    loadBackgroundImage(true);
     const interval = setInterval(() => loadBackgroundImage(true), 30 * 60 * 1000);
     
-    // 添加窗口大小变化监听，使用防抖处理
-    window.addEventListener('resize', handleResize);
-    
-    // 添加设备方向变化监听
     const orientationMediaQuery = window.matchMedia('(orientation: portrait)');
+    window.addEventListener('resize', handleResize);
     if (orientationMediaQuery.addEventListener) {
       orientationMediaQuery.addEventListener('change', handleResize);
     } else {
-      // 兼容旧版浏览器
       orientationMediaQuery.addListener(handleResize);
     }
-    
+
     return () => {
-      if (resizeTimeout) {
-        window.clearTimeout(resizeTimeout);
-      }
+      if (resizeTimeout) window.clearTimeout(resizeTimeout);
+      if (transitionTimeoutRef.current) clearTimeout(transitionTimeoutRef.current);
       clearInterval(interval);
       window.removeEventListener('resize', handleResize);
       
-      // 移除方向变化监听
       if (orientationMediaQuery.removeEventListener) {
         orientationMediaQuery.removeEventListener('change', handleResize);
       } else {
-        // 兼容旧版浏览器
         orientationMediaQuery.removeListener(handleResize);
       }
       
-      // 清理所有创建的URL对象
-      if (previousImageRef.current && previousImageRef.current.startsWith('blob:')) {
-        URL.revokeObjectURL(previousImageRef.current);
+      // 清理图片资源
+      if (currentImageRef.current && currentImageRef.current.startsWith('blob:')) {
+        URL.revokeObjectURL(currentImageRef.current);
       }
     };
   }, []);
 
-  const changeBackground = () => {
-    loadBackgroundImage(true); // 强制刷新
-  };
-
   return (
     <div className="relative min-h-screen overflow-hidden">
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-1000 ease-in-out"
-        style={{
-          backgroundImage: backgroundImage ? `url(${backgroundImage})` : 'none',
-          filter: theme === 'light' ? 'brightness(0.9) blur(0.5px)' : 'brightness(0.7) blur(0.5px)'
-        }}
-      />
+      {/* 底层：新图片（准备显示的图片） */}
+      {nextImage && (
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+          style={{
+            backgroundImage: `url(${nextImage})`,
+            filter: theme === 'light' ? 'brightness(0.9) blur(0.5px)' : 'brightness(0.7) blur(0.5px)',
+          }}
+        />
+      )}
+      
+      {/* 顶层：当前图片（正在显示的图片） */}
+      {currentImage && (
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-opacity duration-1000 ease-in-out"
+          style={{
+            backgroundImage: `url(${currentImage})`,
+            filter: theme === 'light' ? 'brightness(0.9) blur(0.5px)' : 'brightness(0.7) blur(0.5px)',
+            opacity: isTransitioning ? 0 : 1,
+          }}
+        />
+      )}
       
       <div className={`absolute inset-0 ${theme === 'light' ? 'bg-white/30' : 'bg-black/30'}`} />
       
@@ -191,16 +223,17 @@ export const DynamicBackground: React.FC<DynamicBackgroundProps> = ({ children }
       </div>
       
       <button
-        onClick={changeBackground}
+        onClick={() => loadBackgroundImage(true)}
+        disabled={isTransitioning}
         className={`fixed bottom-6 right-6 z-20 p-3 backdrop-blur-md rounded-full transition-all duration-200 border ${
           theme === 'light' 
             ? 'bg-black/20 hover:bg-black/30 border-black/20 text-black' 
             : 'bg-white/20 hover:bg-white/30 border-white/20 text-white'
-        }`}
+        } ${isTransitioning ? 'opacity-50 cursor-not-allowed' : ''}`}
         title="更换背景"
       >
         <svg 
-          className="w-5 h-5 text-white" 
+          className="w-5 h-5" 
           fill="none" 
           stroke="currentColor" 
           viewBox="0 0 24 24"

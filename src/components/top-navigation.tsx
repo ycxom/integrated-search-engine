@@ -12,8 +12,8 @@ import {
 export const TopNavigation: React.FC = () => {
   const { theme, setTheme } = useTheme();
   
-  const handleSettingsClick = () => {
-    console.log('打开设置');
+  const handleHomeClick = () => {
+    window.open('https://ycxom.top', '_blank', 'noopener,noreferrer');
   };
 
   const handleInfoClick = () => {
@@ -89,14 +89,19 @@ export const TopNavigation: React.FC = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleSettingsClick}
+              onClick={handleHomeClick}
               className={`transition-all duration-200 ${
                 theme === 'light'
                   ? 'text-black/70 hover:text-black hover:bg-black/10'
                   : 'text-white/80 hover:text-white hover:bg-white/10'
               }`}
             >
-              <Settings className="w-4 h-4" />
+              <span className="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                  <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                  <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                </svg>
+              </span>
             </Button>
             <Button
               variant="ghost"
