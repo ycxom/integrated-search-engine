@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Settings, Github, Sun, Moon, Monitor } from 'lucide-react';
+import { Github, Sun, Moon, Monitor } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import {
   DropdownMenu,
@@ -8,6 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { AutoSwitchControl } from '@/components/auto-switch-control';
 
 export const TopNavigation: React.FC = () => {
   const { theme, setTheme } = useTheme();
@@ -40,7 +41,8 @@ export const TopNavigation: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-4">
+            <AutoSwitchControl />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button

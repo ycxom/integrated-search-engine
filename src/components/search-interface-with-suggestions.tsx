@@ -1,13 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SearchEngineSelector, SEARCH_ENGINES, SearchEngine, SearchType } from './search-engine-selector';
-import { Search, ExternalLink, Image as ImageIcon, Video, Newspaper, GraduationCap } from 'lucide-react';
+import { Search, ExternalLink, Image as ImageIcon, Video, Newspaper, GraduationCap, Loader2 } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { SearchSuggestions } from './search-suggestions';
 import { useSearchSuggestions } from '@/hooks/useSearchSuggestions';
-import { jumpToSearchEngine } from './engine-logo';
 import { useAutoSwitchControl } from '@/hooks/useAutoSwitchControl';
+import { SuggestionResult } from '@/services/suggestion-api';
 
 // 数字滚动组件
 interface DigitRollerProps {
@@ -172,83 +171,27 @@ const Clock: React.FC<ClockProps> = ({ theme }) => {
   );
 };
 
-export const SearchInterface: React.FC = () => {
+export const SearchInterfaceWithSuggestions: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchType, setSearchType] = useState<SearchType>('web');
   const [selectedEngine, setSelectedEngine] = useState<SearchEngine>(
     SEARCH_ENGINES.find(engine => engine.type === 'web') || SEARCH_ENGINES[0]
   );
   const [isSearching, setIsSearching] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
+  const [isMouseOverSuggestions, setIsMouseOverSuggestions] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
   const { theme } = useTheme();
+
+  const inputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+
+  const { suggestions, mergedSuggestions, isLoading, error, isQuickSearch, fetchSuggestions, fetchEnhancedSuggestions } = useSearchSuggestions();
   
   // 自动切换控制
   const { isAutoSwitchEnabled } = useAutoSwitchControl();
-  
-  // 搜索建议相关状态
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [isInputFocused, setIsInputFocused] = useState(false);
-  const [isMouseOverSuggestions, setIsMouseOverSuggestions] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-  
-  // 使用搜索建议hook
-  const {
-    suggestions,
-    mergedSuggestions,
-    isLoading: suggestionsLoading,
-    isQuickSearch,
-    fetchSuggestions
-  } = useSearchSuggestions();
-
-  // 搜索建议事件处理
-  const handleInputFocus = () => {
-    setIsInputFocused(true);
-    setShowSuggestions(true);
-    if (searchQuery.trim()) {
-      fetchSuggestions(searchQuery);
-    }
-  };
-
-  const handleInputBlur = () => {
-    setTimeout(() => {
-      if (!isMouseOverSuggestions) {
-        setIsInputFocused(false);
-        setShowSuggestions(false);
-      }
-    }, 150);
-  };
-
-  const handleMouseEnterSuggestions = () => {
-    setIsMouseOverSuggestions(true);
-  };
-
-  const handleMouseLeaveSuggestions = () => {
-    setIsMouseOverSuggestions(false);
-    if (!isInputFocused) {
-      setShowSuggestions(false);
-    }
-  };
-
-  const handleSuggestionSelect = (suggestion: string) => {
-    setSearchQuery(suggestion);
-    setShowSuggestions(false);
-    setIsInputFocused(false);
-    // 自动执行搜索
-    setTimeout(() => {
-      if (inputRef.current) {
-        inputRef.current.blur();
-      }
-      handleSearchWithQuery(suggestion);
-    }, 100);
-  };
-
-  const handleLogoClick = (engineId: string, keyword: string) => {
-    // 只有在自动切换开启时才允许点击logo直接跳转搜索
-    if (isAutoSwitchEnabled) {
-      jumpToSearchEngine(engineId, keyword);
-      setShowSuggestions(false);
-    }
-    // 如果自动切换关闭，不执行任何操作
-  };
 
   // 判断字符串是否为URL
   const isValidUrl = (string: string): boolean => {
@@ -275,35 +218,162 @@ export const SearchInterface: React.FC = () => {
            string.includes('unsplash.com');
   };
 
-  const handleSearchWithQuery = (query: string) => {
-    if (!query.trim()) return;
+  // 处理搜索
+  const handleSearch = useCallback(() => {
+    if (!searchQuery.trim()) return;
     
     setIsSearching(true);
+    setShowSuggestions(false);
+    setSelectedSuggestionIndex(-1);
     
     if (searchType === 'image' && selectedEngine.supportImageUpload) {
       // 检查输入是否为图片URL
-      if (isImageUrl(query.trim())) {
+      if (isImageUrl(searchQuery.trim())) {
         // 以图搜图 - 使用图片URL
-        const imageUrl = query.trim();
+        const imageUrl = searchQuery.trim();
         const searchUrl = selectedEngine.imageSearchUrl + encodeURIComponent(imageUrl);
         window.open(searchUrl, '_blank', 'noopener,noreferrer');
       } else {
         // 作为普通文本搜索图片
-        const searchUrl = selectedEngine.url + encodeURIComponent(query.trim());
+        const searchUrl = selectedEngine.url + encodeURIComponent(searchQuery.trim());
         window.open(searchUrl, '_blank', 'noopener,noreferrer');
       }
     } else {
       // 普通文本搜索
-      const searchUrl = selectedEngine.url + encodeURIComponent(query.trim());
+      const searchUrl = selectedEngine.url + encodeURIComponent(searchQuery.trim());
       window.open(searchUrl, '_blank', 'noopener,noreferrer');
     }
     
     setTimeout(() => setIsSearching(false), 1000);
-  };
+  }, [searchQuery, searchType, selectedEngine]);
 
-  const handleSearch = () => {
-    handleSearchWithQuery(searchQuery);
-  };
+  // 处理建议点击（高级功能：自动切换搜索引擎）
+  const handleSuggestionClick = useCallback((suggestion: SuggestionResult | any) => {
+    setSearchQuery(suggestion.text);
+    setShowSuggestions(false);
+    setSelectedSuggestionIndex(-1);
+    
+    // 高级功能：自动切换到对应的搜索引擎（需要检查开关状态）
+    if (isAutoSwitchEnabled && suggestion.engineId && suggestion.engineId !== 'all') {
+      const engine = SEARCH_ENGINES.find(e => e.id === suggestion.engineId);
+      if (engine) {
+        setSelectedEngine(engine);
+        console.log('自动切换开启，切换到搜索引擎:', engine.name);
+      }
+    } else if (!isAutoSwitchEnabled && suggestion.engineId && suggestion.engineId !== 'all') {
+      console.log('自动切换已关闭，不切换搜索引擎');
+    }
+    
+    // 聚焦输入框，让用户可以继续编辑或直接搜索
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
+  }, [isAutoSwitchEnabled]);
+
+  // 处理搜索引擎logo点击
+  const handleEngineLogoClick = useCallback((engineId: string, keyword: string) => {
+    // logo点击功能始终可用，不受自动切换开关影响
+    const engine = SEARCH_ENGINES.find(e => e.id === engineId);
+    if (engine && keyword.trim()) {
+      const searchUrl = engine.url + encodeURIComponent(keyword.trim());
+      window.open(searchUrl, '_blank', 'noopener,noreferrer');
+      console.log('点击logo跳转到:', engine.name);
+    }
+  }, []);
+
+  // 处理输入变化
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchQuery(value);
+    setSelectedSuggestionIndex(-1);
+    
+    if (searchType === 'web') {
+      // 网页搜索使用增强功能获取所有搜索引擎的建议，支持去重合并和logo显示
+      fetchEnhancedSuggestions(value);
+    } else {
+      // 其他类型使用单个搜索引擎的建议
+      fetchSuggestions(value, selectedEngine.id);
+    }
+    setShowSuggestions(true);
+  }, [fetchSuggestions, fetchEnhancedSuggestions, selectedEngine.id, searchType]);
+
+  // 处理输入框焦点
+  const handleInputFocus = useCallback(() => {
+    setIsInputFocused(true);
+    if (searchType === 'web') {
+      fetchEnhancedSuggestions(searchQuery);
+    } else {
+      fetchSuggestions(searchQuery, selectedEngine.id);
+    }
+    setShowSuggestions(true);
+  }, [searchQuery, fetchSuggestions, fetchEnhancedSuggestions, selectedEngine.id, searchType]);
+
+  // 处理输入框失焦
+  const handleInputBlur = useCallback(() => {
+    setIsInputFocused(false);
+    // 延迟关闭建议框，给鼠标移动到建议框的时间
+    setTimeout(() => {
+      if (!isMouseOverSuggestions) {
+        setShowSuggestions(false);
+        setSelectedSuggestionIndex(-1);
+      }
+    }, 150);
+  }, [isMouseOverSuggestions]);
+
+  // 处理鼠标进入建议框
+  const handleMouseEnterSuggestions = useCallback(() => {
+    setIsMouseOverSuggestions(true);
+  }, []);
+
+  // 处理鼠标离开建议框
+  const handleMouseLeaveSuggestions = useCallback(() => {
+    setIsMouseOverSuggestions(false);
+    // 如果输入框也没有焦点，则关闭建议框
+    if (!isInputFocused) {
+      setShowSuggestions(false);
+      setSelectedSuggestionIndex(-1);
+    }
+  }, [isInputFocused]);
+
+  // 处理键盘事件
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const currentSuggestions = searchType === 'web' ? mergedSuggestions : suggestions;
+    
+    if (!showSuggestions || currentSuggestions.length === 0) {
+      if (e.key === 'Enter') {
+        handleSearch();
+      }
+      return;
+    }
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedSuggestionIndex(prev => 
+          prev < currentSuggestions.length - 1 ? prev + 1 : 0
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedSuggestionIndex(prev => 
+          prev > 0 ? prev - 1 : currentSuggestions.length - 1
+        );
+        break;
+      case 'Enter':
+        e.preventDefault();
+        if (selectedSuggestionIndex >= 0) {
+          handleSuggestionClick(currentSuggestions[selectedSuggestionIndex]);
+        } else {
+          handleSearch();
+        }
+        break;
+      case 'Escape':
+        setShowSuggestions(false);
+        setSelectedSuggestionIndex(-1);
+        inputRef.current?.blur();
+        break;
+    }
+  }, [showSuggestions, suggestions, mergedSuggestions, searchType, selectedSuggestionIndex, handleSearch, handleSuggestionClick]);
 
   const handleSearchTypeChange = (type: SearchType) => {
     setSearchType(type);
@@ -313,41 +383,35 @@ export const SearchInterface: React.FC = () => {
       setSelectedEngine(engineOfType);
     }
     
-    // 清空搜索框
+    // 清空搜索框和建议
     setSearchQuery('');
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchQuery(value);
-    
-    if (value.trim()) {
-      fetchSuggestions(value);
-      setShowSuggestions(true);
-    } else {
-      setShowSuggestions(false);
-    }
+    setShowSuggestions(false);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !showSuggestions) {
       handleSearch();
-      setShowSuggestions(false);
-    } else if (e.key === 'Escape') {
-      setShowSuggestions(false);
-      if (inputRef.current) {
-        inputRef.current.blur();
-      }
     }
   };
 
   const handleQuickSearch = (query: string) => {
     setSearchQuery(query);
-    // 自动获取建议
-    if (query.trim()) {
-      fetchSuggestions(query);
-    }
   };
+
+  // 点击外部关闭建议
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+        setSelectedSuggestionIndex(-1);
+        setIsMouseOverSuggestions(false);
+        setIsInputFocused(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // 根据搜索类型提供不同的热门搜索词
   const getQuickSearchTerms = () => {
@@ -391,9 +455,8 @@ export const SearchInterface: React.FC = () => {
     }
   };
 
-
   return (
-    <div className="flex flex-col items-center min-h-screen px-4 md:justify-center justify-start pt-20 md:pt-0">
+    <div className="flex flex-col items-center min-h-screen px-4 md:justify-center justify-start pt-20 md:pt-0" ref={containerRef}>
         <div className="text-center mb-8">
           <Clock theme={theme} />
           <p className={`${theme === 'light' ? 'text-black/80' : 'text-white/80'}`} style={{ fontSize: '1.125rem' }}>
@@ -422,35 +485,25 @@ export const SearchInterface: React.FC = () => {
                   <Input
                     ref={inputRef}
                     type="text"
-                    placeholder={searchType === 'image' && selectedEngine.supportImageUpload ? '输入图片URL以图搜图或输入关键词搜索图片...' : selectedEngine.placeholder}
+                    placeholder={
+                      searchType === 'web' 
+                        ? '搜索全网内容...' 
+                        : searchType === 'image' && selectedEngine.supportImageUpload 
+                          ? '输入图片URL以图搜图或输入关键词搜索图片...' 
+                          : selectedEngine.placeholder
+                    }
                     value={searchQuery}
                     onChange={handleInputChange}
                     onFocus={handleInputFocus}
                     onBlur={handleInputBlur}
                     onKeyPress={handleKeyPress}
+                    onKeyDown={handleKeyDown}
                     className={`pl-12 pr-4 py-4 text-lg rounded-xl transition-all duration-200 ${
                       theme === 'light'
                         ? 'bg-black/5 border-black/10 text-black placeholder-black/60 focus:bg-black/10 focus:border-black/20'
                         : 'bg-white/10 border-white/20 text-white placeholder-white/60 focus:bg-white/20 focus:border-white/40'
                     }`}
                   />
-                  
-                  {/* 搜索建议组件 */}
-                  {showSuggestions && (
-                    <SearchSuggestions
-                      query={searchQuery}
-                      suggestions={suggestions.map(s => s.text)}
-                      mergedSuggestions={mergedSuggestions}
-                      isLoading={suggestionsLoading}
-                      isQuickSearch={isQuickSearch}
-                      onSuggestionClick={handleSuggestionSelect}
-                      onLogoClick={handleLogoClick}
-                      onClose={() => setShowSuggestions(false)}
-                      isVisible={showSuggestions}
-                      onMouseEnter={handleMouseEnterSuggestions}
-                      onMouseLeave={handleMouseLeaveSuggestions}
-                    />
-                  )}
                 </div>
                 <Button
                   onClick={handleSearch}
@@ -472,6 +525,143 @@ export const SearchInterface: React.FC = () => {
                 </Button>
               </div>
             </div>
+
+            {/* 搜索建议 */}
+            {showSuggestions && ((searchType === 'web' ? mergedSuggestions.length > 0 : suggestions.length > 0) || isLoading) && (
+              <div 
+                ref={suggestionsRef}
+                className={`absolute top-full left-0 right-0 mt-2 backdrop-blur-md rounded-2xl shadow-2xl z-50 max-h-80 overflow-y-auto ${
+                  theme === 'light' 
+                    ? 'bg-black/10 border border-black/10' 
+                    : 'bg-white/20 border border-white/20'
+                }`}
+                onMouseEnter={handleMouseEnterSuggestions}
+                onMouseLeave={handleMouseLeaveSuggestions}
+              >
+                <div className="p-4">
+                  {isLoading && (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className={`h-5 w-5 animate-spin ${theme === 'light' ? 'text-black/60' : 'text-white/60'}`} />
+                      <span className={`ml-2 ${theme === 'light' ? 'text-black/60' : 'text-white/60'}`}>获取建议中...</span>
+                    </div>
+                  )}
+                  
+                  {!isLoading && (searchType === 'web' ? mergedSuggestions.length > 0 : suggestions.length > 0) && (
+                    <div className="space-y-1">
+                      {/* 显示来源标题 */}
+                      {searchType === 'web' && !searchQuery.trim() && (
+                        <div className={`px-3 py-2 text-sm border-b ${
+                          theme === 'light' 
+                            ? 'text-black/60 border-black/10' 
+                            : 'text-white/60 border-white/10'
+                        }`}>
+                          🔥 热门搜索推荐
+                        </div>
+                      )}
+                      {searchType === 'web' && searchQuery.trim() && (
+                        <div className={`px-3 py-2 text-sm border-b ${
+                          theme === 'light' 
+                            ? 'text-black/60 border-black/10' 
+                            : 'text-white/60 border-white/10'
+                        }`}>
+                          {isQuickSearch ? '⚡ 快捷搜索' : '🌟 全网搜索建议'}
+                        </div>
+                      )}
+                      
+                      {/* 渲染建议项 */}
+                      {(searchType === 'web' ? mergedSuggestions : suggestions).map((suggestion, index) => (
+                        <div
+                          key={`${suggestion.text}-${index}`}
+                          className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                            index === selectedSuggestionIndex
+                              ? theme === 'light'
+                                ? 'bg-black/20 text-black'
+                                : 'bg-white/20 text-white'
+                              : theme === 'light'
+                                ? 'hover:bg-black/10 text-black/80 hover:text-black'
+                                : 'hover:bg-white/10 text-white/80 hover:text-white'
+                          }`}
+                          onClick={() => handleSuggestionClick(suggestion)}
+                        >
+                          <div className="flex items-center flex-1">
+                            <span className="flex-1 truncate">{suggestion.text}</span>
+                            {/* 去重标识 */}
+                            {searchType === 'web' && (suggestion as any).isDuplicated && (
+                              <div className="w-2 h-2 bg-blue-500 rounded-full ml-2 flex-shrink-0"></div>
+                            )}
+                          </div>
+                          
+                          {/* 搜索引擎Logo区域 */}
+                          <div className="ml-3 flex items-center space-x-1">
+                            {searchType === 'web' && (suggestion as any).sources ? (
+                              // 显示搜索引擎logo
+                              (suggestion as any).sources.slice(0, 3).map((engineId: string, logoIndex: number) => (
+                                <div
+                                  key={`${engineId}-${logoIndex}`}
+                                  className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium transition-all duration-200 cursor-pointer hover:scale-110 ${
+                                    theme === 'light' ? 'bg-gray-200 text-gray-700 hover:bg-gray-300' : 'bg-gray-600 text-gray-200 hover:bg-gray-500'
+                                  }`}
+                                  style={{ marginLeft: logoIndex > 0 ? '-4px' : '0' }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEngineLogoClick(engineId, suggestion.text);
+                                  }}
+                                  title={`点击在${engineId === 'baidu' ? '百度' : engineId === 'google' ? 'Google' : engineId === 'sogou' ? '搜狗' : engineId === 'bing' ? '必应' : engineId}中搜索`}
+                                >
+                                  {engineId === 'baidu' ? '百' : 
+                                   engineId === 'google' ? 'G' : 
+                                   engineId === 'sogou' ? '搜' : 
+                                   engineId === 'bing' ? 'B' : 
+                                   engineId === 'so360' ? '360' : 
+                                   engineId.charAt(0).toUpperCase()}
+                                </div>
+                              ))
+                            ) : (
+                              // 非网页搜索显示文字来源
+                              <span 
+                                className={`text-xs px-2 py-1 rounded-full cursor-pointer transition-all duration-200 ${
+                                  theme === 'light'
+                                    ? 'bg-black/20 text-black/80 hover:bg-black/30'
+                                    : 'bg-white/20 text-white/80 hover:bg-white/30'
+                                }`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (suggestion.engineId && suggestion.engineId !== 'all') {
+                                    const engine = SEARCH_ENGINES.find(e => e.id === suggestion.engineId);
+                                    if (engine) {
+                                      setSelectedEngine(engine);
+                                      setSearchQuery(suggestion.text);
+                                      setShowSuggestions(false);
+                                    }
+                                  }
+                                }}
+                              >
+                                {(suggestion as any).source || '未知'}
+                              </span>
+                            )}
+                            
+                            {/* 显示更多logo的数量 */}
+                            {searchType === 'web' && (suggestion as any).sources && (suggestion as any).sources.length > 3 && (
+                              <div className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium -ml-1 ${
+                                theme === 'light' ? 'bg-gray-100 text-gray-600 border-2 border-white' : 'bg-gray-700 text-gray-300 border-2 border-gray-800'
+                              }`}>
+                                +{(suggestion as any).sources.length - 3}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {error && (
+                    <div className={`px-3 py-2 text-sm ${theme === 'light' ? 'text-red-600' : 'text-red-400'}`}>
+                      {error}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
