@@ -7,16 +7,25 @@ interface DynamicBackgroundProps {
 
 // 根据设备类型选择合适的API
 const getWallpaperApiByDevice = (): string => {
-  // 检测是否为移动设备
-  const isMobile = window.innerWidth <= 768;
-  // 检测是否为平板设备
-  const isTablet = window.innerWidth > 768 && window.innerWidth <= 1024;
+  // 获取设备像素比
+  const pixelRatio = window.devicePixelRatio || 1;
   
-  if (isMobile) {
+  // 获取屏幕的物理尺寸
+  const screenWidth = window.screen.width * pixelRatio;
+  const screenHeight = window.screen.height * pixelRatio;
+  
+  // 计算屏幕宽高比
+  const aspectRatio = screenWidth / screenHeight;
+  
+  // 根据屏幕宽高比选择合适的API
+  if (aspectRatio < 0.8) {
+    // 竖屏设备（手机竖屏）
     return 'https://ai.ycxom.top:3002/api/v1/wallpaper/by-ratio/portrait';
-  } else if (isTablet) {
+  } else if (aspectRatio > 0.8 && aspectRatio < 1.2) {
+    // 接近正方形的设备（平板等）
     return 'https://ai.ycxom.top:3002/api/v1/wallpaper/by-ratio/square';
   } else {
+    // 横屏设备（桌面、笔记本、手机横屏）
     return 'https://ai.ycxom.top:3002/api/v1/wallpaper/by-ratio/standard';
   }
 };
@@ -27,20 +36,41 @@ export const DynamicBackground: React.FC<DynamicBackgroundProps> = ({ children }
   const { theme } = useTheme();
   const isLoadingRef = useRef(false);
   const previousImageRef = useRef<string | null>(null);
+  const deviceTypeRef = useRef<string>('');
+  const lastLoadTimeRef = useRef<number>(0);
+  const orientationRef = useRef<string>('');
 
-  const loadBackgroundImage = async () => {
+  const loadBackgroundImage = async (forceReload = false) => {
     // 防止重复加载
     if (isLoadingRef.current) return;
+    
+    // 获取当前设备类型
+    const apiUrl = getWallpaperApiByDevice();
+    const currentDeviceType = apiUrl.split('/').pop() || '';
+    
+    // 获取当前设备方向
+    const currentOrientation = window.matchMedia('(orientation: landscape)').matches ? 'landscape' : 'portrait';
+    
+    // 如果不是强制刷新，并且设备类型和方向都没有变化，且距离上次加载时间不足5分钟，则不重新加载
+    const currentTime = Date.now();
+    if (!forceReload && 
+        currentDeviceType === deviceTypeRef.current && 
+        currentOrientation === orientationRef.current &&
+        currentTime - lastLoadTimeRef.current < 5 * 60 * 1000) {
+      return;
+    }
+    
+    // 更新设备类型、方向和加载时间
+    deviceTypeRef.current = currentDeviceType;
+    orientationRef.current = currentOrientation;
+    lastLoadTimeRef.current = currentTime;
     
     isLoadingRef.current = true;
     setIsLoading(true);
     
     try {
-      // 根据设备类型选择合适的API
-      const apiUrl = getWallpaperApiByDevice();
-      
       // 添加随机参数避免缓存
-      const urlWithCache = `${apiUrl}?cache=${Date.now()}`;
+      const urlWithCache = `${apiUrl}?cache=${currentTime}`;
       const response = await fetch(urlWithCache);
       
       if (response.ok) {
@@ -71,49 +101,61 @@ export const DynamicBackground: React.FC<DynamicBackgroundProps> = ({ children }
     }
   };
 
-  const changeBackground = () => {
-    loadBackgroundImage();
-  };
-
   useEffect(() => {
-    // 监听窗口大小变化，但只在宽度或高度发生显著变化时更新背景
-    // 这样可以避免输入法弹出导致的小幅度高度变化触发背景重新加载
+    // 使用防抖函数处理窗口大小变化
+    let resizeTimeout: number | null = null;
+    
     const handleResize = () => {
-      // 存储当前窗口尺寸
-      const currentWidth = window.innerWidth;
-      const currentHeight = window.innerHeight;
-      
-      // 如果是首次加载或窗口宽度发生变化（设备方向改变）
-      // 或者窗口高度变化超过30%（真正的窗口大小变化，而不是输入法弹出）
-      if (!handleResize.lastWidth || 
-          Math.abs(currentWidth - handleResize.lastWidth) > 100 ||
-          Math.abs(currentHeight - handleResize.lastHeight) / handleResize.lastHeight > 0.3) {
-        
-        // 更新记录的尺寸
-        handleResize.lastWidth = currentWidth;
-        handleResize.lastHeight = currentHeight;
-        
-        // 加载新背景
-        loadBackgroundImage();
+      // 清除之前的定时器
+      if (resizeTimeout) {
+        window.clearTimeout(resizeTimeout);
       }
+      
+      // 设置新的定时器，延迟500ms执行，避免频繁触发
+      resizeTimeout = window.setTimeout(() => {
+        // 获取当前设备方向
+        const isLandscape = window.matchMedia('(orientation: landscape)').matches;
+        const currentOrientation = isLandscape ? 'landscape' : 'portrait';
+        
+        // 如果设备方向发生变化，才重新加载背景
+        if (currentOrientation !== orientationRef.current) {
+          loadBackgroundImage(false); // 不强制刷新，但会检查方向变化
+        }
+      }, 500);
     };
     
-    // 初始化存储的尺寸
-    handleResize.lastWidth = window.innerWidth;
-    handleResize.lastHeight = window.innerHeight;
-    
     // 初始加载
-    loadBackgroundImage();
+    loadBackgroundImage(true); // 强制刷新
     
     // 设置定时器，每30分钟更换一次背景
-    const interval = setInterval(loadBackgroundImage, 30 * 60 * 1000);
+    const interval = setInterval(() => loadBackgroundImage(true), 30 * 60 * 1000);
     
-    // 添加窗口大小变化监听
+    // 添加窗口大小变化监听，使用防抖处理
     window.addEventListener('resize', handleResize);
     
+    // 添加设备方向变化监听
+    const orientationMediaQuery = window.matchMedia('(orientation: portrait)');
+    if (orientationMediaQuery.addEventListener) {
+      orientationMediaQuery.addEventListener('change', handleResize);
+    } else {
+      // 兼容旧版浏览器
+      orientationMediaQuery.addListener(handleResize);
+    }
+    
     return () => {
+      if (resizeTimeout) {
+        window.clearTimeout(resizeTimeout);
+      }
       clearInterval(interval);
       window.removeEventListener('resize', handleResize);
+      
+      // 移除方向变化监听
+      if (orientationMediaQuery.removeEventListener) {
+        orientationMediaQuery.removeEventListener('change', handleResize);
+      } else {
+        // 兼容旧版浏览器
+        orientationMediaQuery.removeListener(handleResize);
+      }
       
       // 清理所有创建的URL对象
       if (previousImageRef.current && previousImageRef.current.startsWith('blob:')) {
@@ -121,6 +163,10 @@ export const DynamicBackground: React.FC<DynamicBackgroundProps> = ({ children }
       }
     };
   }, []);
+
+  const changeBackground = () => {
+    loadBackgroundImage(true); // 强制刷新
+  };
 
   return (
     <div className="relative min-h-screen overflow-hidden">

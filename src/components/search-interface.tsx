@@ -141,7 +141,7 @@ export const SearchInterface: React.FC = () => {
           多功能搜索
         </h1>
         <p className={`text-xl ${theme === 'light' ? 'text-black/80' : 'text-white/80'} drop-shadow-lg`}>
-          集成多个搜索引擎，支持网页、图片、视频、新闻和学术搜索
+          集成多个搜索引擎
         </p>
       </div>
 
@@ -226,7 +226,7 @@ export const SearchInterface: React.FC = () => {
       </div>
 
       <div className={`absolute bottom-6 left-6 text-sm ${theme === 'light' ? 'text-black/60' : 'text-white/60'}`}>
-        <p>背景图片来源: AI壁纸API</p>
+        <p>背景图片来源: 壁纸API</p>
       </div>
     </div>
   );

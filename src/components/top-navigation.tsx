@@ -25,7 +25,11 @@ export const TopNavigation: React.FC = () => {
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-30 bg-white/10 backdrop-blur-md border-b border-white/10">
+    <nav className={`fixed top-0 left-0 right-0 z-30 backdrop-blur-md ${
+      theme === 'light' 
+        ? 'bg-black/5 border-b border-black/10' 
+        : 'bg-white/10 border-b border-white/10'
+    }`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
@@ -33,7 +37,7 @@ export const TopNavigation: React.FC = () => {
               <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
                 <span className="text-white font-bold text-lg">S</span>
               </div>
-              <span className="text-white font-semibold text-lg">智能搜索</span>
+              <span className={`font-semibold text-lg ${theme === 'light' ? 'text-black' : 'text-white'}`}>智能搜索</span>
             </div>
           </div>
 
@@ -43,7 +47,11 @@ export const TopNavigation: React.FC = () => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200"
+                  className={`transition-all duration-200 ${
+                    theme === 'light'
+                      ? 'text-black/70 hover:text-black hover:bg-black/10'
+                      : 'text-white/80 hover:text-white hover:bg-white/10'
+                  }`}
                 >
                   {theme === 'dark' && <Moon className="w-4 h-4" />}
                   {theme === 'light' && <Sun className="w-4 h-4" />}
@@ -70,7 +78,11 @@ export const TopNavigation: React.FC = () => {
               variant="ghost"
               size="sm"
               onClick={handleInfoClick}
-              className="text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200"
+              className={`transition-all duration-200 ${
+                theme === 'light'
+                  ? 'text-black/70 hover:text-black hover:bg-black/10'
+                  : 'text-white/80 hover:text-white hover:bg-white/10'
+              }`}
             >
               <Info className="w-4 h-4" />
             </Button>
@@ -78,7 +90,11 @@ export const TopNavigation: React.FC = () => {
               variant="ghost"
               size="sm"
               onClick={handleSettingsClick}
-              className="text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200"
+              className={`transition-all duration-200 ${
+                theme === 'light'
+                  ? 'text-black/70 hover:text-black hover:bg-black/10'
+                  : 'text-white/80 hover:text-white hover:bg-white/10'
+              }`}
             >
               <Settings className="w-4 h-4" />
             </Button>
@@ -86,7 +102,11 @@ export const TopNavigation: React.FC = () => {
               variant="ghost"
               size="sm"
               onClick={handleGithubClick}
-              className="text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200"
+              className={`transition-all duration-200 ${
+                theme === 'light'
+                  ? 'text-black/70 hover:text-black hover:bg-black/10'
+                  : 'text-white/80 hover:text-white hover:bg-white/10'
+              }`}
             >
               <Github className="w-4 h-4" />
             </Button>

@@ -290,28 +290,38 @@ export const SearchEngineSelector: React.FC<SearchEngineSelectorProps> = ({
         <TabsList className={`grid grid-cols-5 mb-4 backdrop-blur-md ${
           theme === 'light' ? 'bg-black/10' : 'bg-white/10'
         }`}>
-          <TabsTrigger value="web" className={`${
-            theme === 'light' ? 'data-[state=active]:bg-black/30' : 'data-[state=active]:bg-white/30'
+          <TabsTrigger value="web" className={`font-medium ${
+            theme === 'light' 
+              ? 'data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=inactive]:text-black/80 data-[state=inactive]:hover:bg-black/20' 
+              : 'data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=inactive]:text-white/80 data-[state=inactive]:hover:bg-white/20'
           }`}>
             <span className="mr-1">🌐</span> 网页
           </TabsTrigger>
-          <TabsTrigger value="image" className={`${
-            theme === 'light' ? 'data-[state=active]:bg-black/30' : 'data-[state=active]:bg-white/30'
+          <TabsTrigger value="image" className={`font-medium ${
+            theme === 'light' 
+              ? 'data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=inactive]:text-black/80 data-[state=inactive]:hover:bg-black/20' 
+              : 'data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=inactive]:text-white/80 data-[state=inactive]:hover:bg-white/20'
           }`}>
             <span className="mr-1">🖼️</span> 图片
           </TabsTrigger>
-          <TabsTrigger value="video" className={`${
-            theme === 'light' ? 'data-[state=active]:bg-black/30' : 'data-[state=active]:bg-white/30'
+          <TabsTrigger value="video" className={`font-medium ${
+            theme === 'light' 
+              ? 'data-[state=active]:bg-red-600 data-[state=active]:text-white data-[state=inactive]:text-black/80 data-[state=inactive]:hover:bg-black/20' 
+              : 'data-[state=active]:bg-red-500 data-[state=active]:text-white data-[state=inactive]:text-white/80 data-[state=inactive]:hover:bg-white/20'
           }`}>
             <span className="mr-1">📹</span> 视频
           </TabsTrigger>
-          <TabsTrigger value="news" className={`${
-            theme === 'light' ? 'data-[state=active]:bg-black/30' : 'data-[state=active]:bg-white/30'
+          <TabsTrigger value="news" className={`font-medium ${
+            theme === 'light' 
+              ? 'data-[state=active]:bg-green-600 data-[state=active]:text-white data-[state=inactive]:text-black/80 data-[state=inactive]:hover:bg-black/20' 
+              : 'data-[state=active]:bg-green-500 data-[state=active]:text-white data-[state=inactive]:text-white/80 data-[state=inactive]:hover:bg-white/20'
           }`}>
             <span className="mr-1">📰</span> 新闻
           </TabsTrigger>
-          <TabsTrigger value="academic" className={`${
-            theme === 'light' ? 'data-[state=active]:bg-black/30' : 'data-[state=active]:bg-white/30'
+          <TabsTrigger value="academic" className={`font-medium ${
+            theme === 'light' 
+              ? 'data-[state=active]:bg-amber-600 data-[state=active]:text-white data-[state=inactive]:text-black/80 data-[state=inactive]:hover:bg-black/20' 
+              : 'data-[state=active]:bg-amber-500 data-[state=active]:text-white data-[state=inactive]:text-white/80 data-[state=inactive]:hover:bg-white/20'
           }`}>
             <span className="mr-1">🎓</span> 学术
           </TabsTrigger>
