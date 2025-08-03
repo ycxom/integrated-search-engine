@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Settings, Info, Github, Sun, Moon, Monitor } from 'lucide-react';
+import { Settings, Github, Sun, Moon, Monitor } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import {
   DropdownMenu,
@@ -16,9 +16,6 @@ export const TopNavigation: React.FC = () => {
     window.open('https://ycxom.top', '_blank', 'noopener,noreferrer');
   };
 
-  const handleInfoClick = () => {
-    alert('智能搜索 v1.0\n集成多个搜索引擎的统一搜索界面\n支持Google、必应、百度等主流搜索引擎');
-  };
 
   const handleGithubClick = () => {
     window.open('https://github.com/ycxom/integrated-search-engine', '_blank', 'noopener,noreferrer');
@@ -34,10 +31,12 @@ export const TopNavigation: React.FC = () => {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
             <div className="flex-shrink-0 flex items-center">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mr-3">
-                <span className="text-white font-bold text-lg">S</span>
-              </div>
-              <span className={`font-semibold text-lg ${theme === 'light' ? 'text-black' : 'text-white'}`}>智能搜索</span>
+              <img 
+                src="/my-logo.png" 
+                alt="集成搜索引擎" 
+                className="w-8 h-8 mr-3 object-contain"
+              />
+              <span className={`font-semibold text-lg ${theme === 'light' ? 'text-black' : 'text-white'}`}>集成搜索引擎</span>
             </div>
           </div>
 
@@ -74,18 +73,6 @@ export const TopNavigation: React.FC = () => {
               </DropdownMenuContent>
             </DropdownMenu>
             
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleInfoClick}
-              className={`transition-all duration-200 ${
-                theme === 'light'
-                  ? 'text-black/70 hover:text-black hover:bg-black/10'
-                  : 'text-white/80 hover:text-white hover:bg-white/10'
-              }`}
-            >
-              <Info className="w-4 h-4" />
-            </Button>
             <Button
               variant="ghost"
               size="sm"
