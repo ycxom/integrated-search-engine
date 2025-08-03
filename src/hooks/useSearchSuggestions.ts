@@ -72,7 +72,7 @@ export const useSearchSuggestions = (): UseSearchSuggestionsReturn => {
 
       try {
         const results = await suggestionAPI.getSuggestions(query, engine);
-        const suggestionResults: SuggestionResult[] = results.map(text => ({
+        const suggestionResults: SuggestionResult[] = results.map((text: string) => ({
           text,
           source: engine === 'baidu' ? '百度' : 
                  engine === 'google' ? '谷歌' :

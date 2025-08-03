@@ -1,6 +1,6 @@
 import React from 'react';
 import { Search, TrendingUp, Zap } from 'lucide-react';
-import { EngineLogoGroup, jumpToSearchEngine } from '@/components/engine-logo';
+import { EngineLogoGroup } from '@/components/engine-logo';
 import { MergedSuggestion } from '@/utils/result-deduplication';
 
 interface SearchSuggestionsProps {

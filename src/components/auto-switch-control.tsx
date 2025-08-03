@@ -1,4 +1,3 @@
-import React from "react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useAutoSwitchControl } from "@/hooks/useAutoSwitchControl";
@@ -23,13 +22,13 @@ export function AutoSwitchControl() {
         }`}
         title={isAutoSwitchEnabled ? '点击关闭自动切换功能' : '点击开启自动切换功能'}
       >
-        自动切换
+        自动切换引擎
       </Label>
       <Switch
         id="auto-switch"
         checked={isAutoSwitchEnabled}
         onCheckedChange={handleToggle}
-        title={isAutoSwitchEnabled ? '自动切换已开启，点击logo可直接搜索' : '自动切换已关闭，点击logo无效'}
+        title={isAutoSwitchEnabled ? '自动切换已开启，点击结果会自动切换至对应引擎' : '自动切换已关闭，将不会自动切换'}
       />
       {/* 状态指示器 */}
       <div className={`w-2 h-2 rounded-full ${

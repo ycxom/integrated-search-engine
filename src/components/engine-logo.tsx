@@ -1,7 +1,6 @@
 import React from 'react';
 import { getEngineLogo } from '@/config/engine-logos';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useAutoSwitchControl } from '@/hooks/useAutoSwitchControl';
 
 interface EngineLogoProps {
   engineId: string;
@@ -24,7 +23,6 @@ export const EngineLogo: React.FC<EngineLogoProps> = ({
   className = ''
 }) => {
   const logo = getEngineLogo(engineId);
-  const { isAutoSwitchEnabled } = useAutoSwitchControl();
   
   if (!logo) {
     return (
@@ -103,7 +101,6 @@ export const EngineLogoGroup: React.FC<EngineLogoGroupProps> = ({
 }) => {
   const visibleEngines = engineIds.slice(0, maxVisible);
   const hiddenCount = Math.max(0, engineIds.length - maxVisible);
-  const { isAutoSwitchEnabled } = useAutoSwitchControl();
 
   const handleLogoClick = (engineId: string) => {
     // logo点击功能始终可用，不受自动切换开关影响
