@@ -287,26 +287,29 @@ export const SearchInterfaceWithSuggestions: React.FC = () => {
     setSearchQuery(value);
     setSelectedSuggestionIndex(-1);
     
+    // 只有网页搜索才显示建议
     if (searchType === 'web') {
       // 网页搜索使用增强功能获取所有搜索引擎的建议，支持去重合并和logo显示
       fetchEnhancedSuggestions(value);
+      setShowSuggestions(true);
     } else {
-      // 其他类型使用单个搜索引擎的建议
-      fetchSuggestions(value, selectedEngine.id);
+      // 其他类型不显示建议
+      setShowSuggestions(false);
     }
-    setShowSuggestions(true);
-  }, [fetchSuggestions, fetchEnhancedSuggestions, selectedEngine.id, searchType]);
+  }, [fetchEnhancedSuggestions, searchType]);
 
   // 处理输入框焦点
   const handleInputFocus = useCallback(() => {
     setIsInputFocused(true);
+    // 只有网页搜索才显示建议
     if (searchType === 'web') {
       fetchEnhancedSuggestions(searchQuery);
+      setShowSuggestions(true);
     } else {
-      fetchSuggestions(searchQuery, selectedEngine.id);
+      // 其他类型不显示建议
+      setShowSuggestions(false);
     }
-    setShowSuggestions(true);
-  }, [searchQuery, fetchSuggestions, fetchEnhancedSuggestions, selectedEngine.id, searchType]);
+  }, [searchQuery, fetchEnhancedSuggestions, searchType]);
 
   // 处理输入框失焦
   const handleInputBlur = useCallback(() => {
@@ -337,43 +340,40 @@ export const SearchInterfaceWithSuggestions: React.FC = () => {
 
   // 处理键盘事件
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    const currentSuggestions = searchType === 'web' ? mergedSuggestions : suggestions;
-    
-    if (!showSuggestions || currentSuggestions.length === 0) {
-      if (e.key === 'Enter') {
-        handleSearch();
+    // 只在网页搜索模式下处理建议相关的键盘事件
+    if (searchType === 'web' && showSuggestions && mergedSuggestions.length > 0) {
+      switch (e.key) {
+        case 'ArrowDown':
+          e.preventDefault();
+          setSelectedSuggestionIndex(prev => 
+            prev < mergedSuggestions.length - 1 ? prev + 1 : 0
+          );
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          setSelectedSuggestionIndex(prev => 
+            prev > 0 ? prev - 1 : mergedSuggestions.length - 1
+          );
+          break;
+        case 'Enter':
+          e.preventDefault();
+          if (selectedSuggestionIndex >= 0) {
+            handleSuggestionClick(mergedSuggestions[selectedSuggestionIndex]);
+          } else {
+            handleSearch();
+          }
+          break;
+        case 'Escape':
+          setShowSuggestions(false);
+          setSelectedSuggestionIndex(-1);
+          inputRef.current?.blur();
+          break;
       }
-      return;
+    } else if (e.key === 'Enter') {
+      // 非网页搜索模式或没有建议时，直接搜索
+      handleSearch();
     }
-
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setSelectedSuggestionIndex(prev => 
-          prev < currentSuggestions.length - 1 ? prev + 1 : 0
-        );
-        break;
-      case 'ArrowUp':
-        e.preventDefault();
-        setSelectedSuggestionIndex(prev => 
-          prev > 0 ? prev - 1 : currentSuggestions.length - 1
-        );
-        break;
-      case 'Enter':
-        e.preventDefault();
-        if (selectedSuggestionIndex >= 0) {
-          handleSuggestionClick(currentSuggestions[selectedSuggestionIndex]);
-        } else {
-          handleSearch();
-        }
-        break;
-      case 'Escape':
-        setShowSuggestions(false);
-        setSelectedSuggestionIndex(-1);
-        inputRef.current?.blur();
-        break;
-    }
-  }, [showSuggestions, suggestions, mergedSuggestions, searchType, selectedSuggestionIndex, handleSearch, handleSuggestionClick]);
+  }, [showSuggestions, mergedSuggestions, searchType, selectedSuggestionIndex, handleSearch, handleSuggestionClick]);
 
   const handleSearchTypeChange = (type: SearchType) => {
     setSearchType(type);
@@ -386,6 +386,9 @@ export const SearchInterfaceWithSuggestions: React.FC = () => {
     // 清空搜索框和建议
     setSearchQuery('');
     setShowSuggestions(false);
+    // 确保不显示推荐提示框
+    setSelectedSuggestionIndex(-1);
+    setIsMouseOverSuggestions(false);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -526,8 +529,8 @@ export const SearchInterfaceWithSuggestions: React.FC = () => {
               </div>
             </div>
 
-            {/* 搜索建议 */}
-            {showSuggestions && ((searchType === 'web' ? mergedSuggestions.length > 0 : suggestions.length > 0) || isLoading) && (
+            {/* 搜索建议 - 只在网页搜索模式下显示 */}
+            {searchType === 'web' && showSuggestions && (mergedSuggestions.length > 0 || isLoading) && (
               <div 
                 ref={suggestionsRef}
                 className={`absolute top-full left-0 right-0 mt-2 backdrop-blur-md rounded-2xl shadow-2xl z-50 max-h-80 overflow-y-auto ${
@@ -546,10 +549,10 @@ export const SearchInterfaceWithSuggestions: React.FC = () => {
                     </div>
                   )}
                   
-                  {!isLoading && (searchType === 'web' ? mergedSuggestions.length > 0 : suggestions.length > 0) && (
+                  {!isLoading && mergedSuggestions.length > 0 && (
                     <div className="space-y-1">
                       {/* 显示来源标题 */}
-                      {searchType === 'web' && !searchQuery.trim() && (
+                      {!searchQuery.trim() && (
                         <div className={`px-3 py-2 text-sm border-b ${
                           theme === 'light' 
                             ? 'text-black/60 border-black/10' 
@@ -558,7 +561,7 @@ export const SearchInterfaceWithSuggestions: React.FC = () => {
                           🔥 热门搜索推荐
                         </div>
                       )}
-                      {searchType === 'web' && searchQuery.trim() && (
+                      {searchQuery.trim() && (
                         <div className={`px-3 py-2 text-sm border-b ${
                           theme === 'light' 
                             ? 'text-black/60 border-black/10' 
@@ -569,7 +572,7 @@ export const SearchInterfaceWithSuggestions: React.FC = () => {
                       )}
                       
                       {/* 渲染建议项 */}
-                      {(searchType === 'web' ? mergedSuggestions : suggestions).map((suggestion, index) => (
+                      {mergedSuggestions.map((suggestion, index) => (
                         <div
                           key={`${suggestion.text}-${index}`}
                           className={`flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer transition-all duration-200 ${
